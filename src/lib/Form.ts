@@ -262,8 +262,8 @@ class Form<T> implements FormAttributes<T> {
 	#getValueRecursively = (path: string[], state: any): any => {
 		const name = path[0];
 
-		if (state === undefined) return state;
 		if (typeof name !== 'string') return state;
+		if (!state) return state;
 
 		return this.#getValueRecursively(path.slice(1), state[name]);
 	};
