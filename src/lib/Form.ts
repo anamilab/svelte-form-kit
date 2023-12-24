@@ -20,6 +20,7 @@ export interface FormAttributes<T> {
 	scroll: boolean;
 	schema: Schema | boolean;
 	reset: boolean;
+	startData: boolean;
 	onSubmit: ((data?: Partial<T>) => void) | ((data?: Partial<T>) => Promise<void>);
 	onUpdate: (state?: FormState<T>) => void;
 }
@@ -40,6 +41,7 @@ class Form<T> implements FormAttributes<T> {
 	scroll: boolean = true;
 	schema: Schema | boolean = false;
 	reset: boolean = true;
+	startData: boolean = false;
 	onSubmit: ((data?: Partial<T>) => void) | ((data?: Partial<T>) => Promise<void>) = () => {};
 	onUpdate: (state?: FormState<T>) => void = () => {};
 	currentState: FormState<T>;
@@ -51,6 +53,7 @@ class Form<T> implements FormAttributes<T> {
 		scroll,
 		schema,
 		reset,
+		startData,
 		onSubmit,
 		onUpdate
 	}: Partial<FormAttributes<T>> | undefined = {}) {
@@ -58,6 +61,7 @@ class Form<T> implements FormAttributes<T> {
 		if (scroll) this.scroll = scroll;
 		if (schema) this.schema = schema;
 		if (reset) this.reset = reset;
+		if (startData) this.startData = startData;
 		if (onSubmit) this.onSubmit = onSubmit;
 		if (onUpdate) this.onUpdate = onUpdate;
 
@@ -114,6 +118,7 @@ class Form<T> implements FormAttributes<T> {
 
 		if (node.type !== 'checkbox') node.addEventListener('input', listener);
 		node.addEventListener('change', listener);
+		if (this.startData) node.dispatchEvent(new Event('change'));
 	};
 
 	#setErrors = (errors: unknown, toScroll = true) => {
