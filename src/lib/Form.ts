@@ -1,4 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/**
+ * @todo remover os tipos any da classe
+ */
 import { setContext } from 'svelte';
 import { derived, writable, type Writable } from 'svelte/store';
 import { scrollToElement, isEqual } from './utils.js';
@@ -21,7 +24,7 @@ export interface FormAttributes<T> {
 	onUpdate: (state?: FormState<T>) => void;
 }
 
-export type FormProps<T> = Partial<FormAttributes<T>>
+export type FormProps<T> = Partial<FormAttributes<T>>;
 
 type YupError = {
 	path: string;
@@ -94,7 +97,9 @@ class Form<T> implements FormAttributes<T> {
 			const isArray = parts.length > 1;
 			const [field, ...structure] = parts;
 
-			const value = element.value;
+			const isCheckbox =
+				element instanceof HTMLInputElement && node.type === 'checkbox' && node.value === 'on';
+			const value = isCheckbox ? element.checked : element.value;
 
 			this.store.update((state) => ({
 				...state,
