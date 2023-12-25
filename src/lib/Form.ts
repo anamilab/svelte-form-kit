@@ -101,9 +101,8 @@ class Form<T> implements FormAttributes<T> {
 			const isArray = parts.length > 1;
 			const [field, ...structure] = parts;
 
-			const isCheckbox =
-				element instanceof HTMLInputElement && node.type === 'checkbox' && node.value === 'on';
-			const value = isCheckbox ? element.checked : element.value;
+			const isCheckbox = element instanceof HTMLInputElement && element.type === 'checkbox';
+			const value = isCheckbox ? (element.checked ? element.value || 'on' : false) : element.value;
 
 			this.store.update((state) => ({
 				...state,
