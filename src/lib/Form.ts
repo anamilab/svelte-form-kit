@@ -27,6 +27,8 @@ export interface FormAttributes<T> {
 
 export type FormProps<T> = Partial<FormAttributes<T>>;
 
+type Field = HTMLInputElement | HTMLSelectElement;
+
 type YupError = {
 	path: string;
 	message: string;
@@ -38,32 +40,32 @@ type YupErrors = {
 
 class Form<T> implements FormAttributes<T> {
 	defaultValues: Partial<T> = {};
-	scroll: boolean = true;
-	schema: Schema | boolean = false;
-	reset: boolean = true;
-	startData: boolean = false;
-	onSubmit: ((data?: Partial<T>) => void) | ((data?: Partial<T>) => Promise<void>) = () => {};
-	onUpdate: (state?: FormState<T>) => void = () => {};
+	scroll: boolean;
+	schema: Schema | boolean;
+	reset: boolean;
+	startData: boolean;
+	onSubmit: ((data?: Partial<T>) => void) | ((data?: Partial<T>) => Promise<void>);
+	onUpdate: (state?: FormState<T>) => void;
 	currentState: FormState<T>;
 	store: Writable<FormState<T>>;
 	prevData: Partial<T> = {};
 
 	constructor({
-		defaultValues,
-		scroll,
-		schema,
-		reset,
-		startData,
-		onSubmit,
-		onUpdate
+		defaultValues = {},
+		scroll = true,
+		schema = false,
+		reset = true,
+		startData = false,
+		onSubmit = () => {},
+		onUpdate = () => {}
 	}: Partial<FormAttributes<T>> | undefined = {}) {
-		if (defaultValues) this.defaultValues = defaultValues;
-		if (scroll) this.scroll = scroll;
-		if (schema) this.schema = schema;
-		if (reset) this.reset = reset;
-		if (startData) this.startData = startData;
-		if (onSubmit) this.onSubmit = onSubmit;
-		if (onUpdate) this.onUpdate = onUpdate;
+		this.defaultValues = defaultValues;
+		this.scroll = scroll;
+		this.schema = schema;
+		this.reset = reset;
+		this.startData = startData;
+		this.onSubmit = onSubmit;
+		this.onUpdate = onUpdate;
 
 		this.currentState = {
 			data: defaultValues || {},
@@ -90,9 +92,16 @@ class Form<T> implements FormAttributes<T> {
 		setContext(key, this);
 	}
 
-	bindEvents = (node: HTMLInputElement | HTMLSelectElement) => {
+	bindEvents = (node: Field) => {
+		const isCheckbox = (element: Field) =>
+			element instanceof HTMLInputElement && element.type === 'checkbox';
+
+		const getCheckboxValue = (element: HTMLInputElement) => {
+			return (element.checked && (element.value === 'on' || element.value)) || false;
+		};
+
 		const listener = (e: Event) => {
-			const element = e.target as HTMLInputElement | HTMLSelectElement;
+			const element = e.target as Field;
 			const name = element.getAttribute('name');
 
 			if (!name) return;
@@ -101,18 +110,24 @@ class Form<T> implements FormAttributes<T> {
 			const isArray = parts.length > 1;
 			const [field, ...structure] = parts;
 
-			const isCheckbox = element instanceof HTMLInputElement && element.type === 'checkbox';
-			const value = isCheckbox ? (element.checked ? element.value || 'on' : false) : element.value;
+			const value = isCheckbox(element)
+				? getCheckboxValue(element as HTMLInputElement)
+				: element.value;
 
-			this.store.update((state) => ({
-				...state,
-				data: {
-					...state.data,
-					[field]: isArray
-						? this.#modifyField(state.data[field as keyof T], structure, value, 'update')
-						: value
-				}
-			}));
+			const getData = (state: FormState<T>) =>
+				isArray
+					? this.#modifyField(state.data[field as keyof T], structure, value, 'update')
+					: value;
+
+			this.store.update((state) => {
+				return {
+					...state,
+					data: {
+						...state.data,
+						[field]: getData(state)
+					}
+				};
+			});
 		};
 
 		if (node.type !== 'checkbox') node.addEventListener('input', listener);
@@ -121,19 +136,35 @@ class Form<T> implements FormAttributes<T> {
 	};
 
 	#setErrors = (errors: unknown, toScroll = true) => {
+		const convertPathToBracketNotation = (path: string) => {
+			const segments = path.split(/\.|\[(.*?)\]/).filter(Boolean);
+
+			if (segments.length === 1) return path;
+
+			return segments
+				.map((segment, i) => {
+					if (i === 0) return segment;
+
+					return segment.includes('[') ? segment : `[${segment}]`;
+				})
+				.join('');
+		};
+
 		if (typeof errors === 'object' && errors !== null && 'inner' in errors) {
 			const { inner } = errors as YupErrors;
 
 			this.store.update((state) => {
 				const firstError = Object.values(inner)[0];
-				const element = document.querySelector<HTMLElement>(`[name="${firstError.path}"]`);
+				const bracketName = convertPathToBracketNotation(firstError.path);
+				const element = document.querySelector<HTMLElement>(`[name="${bracketName}"]`);
+
 				if (element && toScroll) scrollToElement(element);
 
 				return {
 					...state,
 					errors: inner.reduce(
-						function (collection, error) {
-							collection[error.path] = error.message;
+						(collection, error) => {
+							collection[convertPathToBracketNotation(error.path)] = error.message;
 							return collection;
 						},
 						{} as { [key: string]: string }
@@ -181,7 +212,6 @@ class Form<T> implements FormAttributes<T> {
 		this.#setLoading(true);
 		await this.onSubmit(state.data);
 		this.#setLoading(false);
-
 		if (this.reset) this.resetState();
 	};
 
