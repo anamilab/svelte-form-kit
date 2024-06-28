@@ -21,6 +21,7 @@ export interface FormAttributes<T> {
 	schema: Schema | boolean;
 	reset: boolean;
 	startData: boolean;
+	onCreate: (data?: Form<T>) => void;
 	onSubmit: ((data?: Partial<T>) => void) | ((data?: Partial<T>) => Promise<void>);
 	onUpdate: (state?: FormState<T>) => void;
 }
@@ -44,6 +45,7 @@ class Form<T> implements FormAttributes<T> {
 	schema: Schema | boolean;
 	reset: boolean;
 	startData: boolean;
+	onCreate: (form?: Form<T>) => void;
 	onSubmit: ((data?: Partial<T>) => void) | ((data?: Partial<T>) => Promise<void>);
 	onUpdate: (state?: FormState<T>) => void;
 	currentState: FormState<T>;
@@ -56,6 +58,7 @@ class Form<T> implements FormAttributes<T> {
 		schema = false,
 		reset = true,
 		startData = false,
+		onCreate = () => {},
 		onSubmit = () => {},
 		onUpdate = () => {}
 	}: Partial<FormAttributes<T>> | undefined = {}) {
@@ -64,6 +67,7 @@ class Form<T> implements FormAttributes<T> {
 		this.schema = schema;
 		this.reset = reset;
 		this.startData = startData;
+		this.onCreate = onCreate;
 		this.onSubmit = onSubmit;
 		this.onUpdate = onUpdate;
 
@@ -85,6 +89,7 @@ class Form<T> implements FormAttributes<T> {
 			}
 		});
 
+		this.onCreate(this);
 		this.createContext();
 	}
 
