@@ -54,9 +54,9 @@ class Form<T> implements FormAttributes<T> {
 
 	constructor({
 		defaultValues = {},
-		scroll = true,
+		scroll = false,
 		schema = false,
-		reset = true,
+		reset = false,
 		startData = false,
 		onCreate = () => {},
 		onSubmit = () => {},
@@ -80,9 +80,10 @@ class Form<T> implements FormAttributes<T> {
 		this.store = writable(this.currentState);
 
 		this.store.subscribe((state) => {
+			console.log(state)
 			this.currentState = state;
 			this.onUpdate(state);
-
+			
 			if (state.didAnyError && !isEqual(state.data, this.prevData)) {
 				this.isValid();
 				this.prevData = state.data;
