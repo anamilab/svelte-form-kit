@@ -80,6 +80,7 @@ class Form<T> implements FormAttributes<T> {
 		this.store = writable(this.currentState);
 
 		this.store.subscribe((state) => {
+			console.log((state.data as any).filterGroups, (state as any).origin);
 			this.currentState = state;
 			this.onUpdate(state);
 
@@ -127,6 +128,7 @@ class Form<T> implements FormAttributes<T> {
 			this.store.update((state) => {
 				return {
 					...state,
+					origin: 'bindEvents',
 					data: {
 						...state.data,
 						[field]: getData(state)
@@ -167,6 +169,7 @@ class Form<T> implements FormAttributes<T> {
 
 				return {
 					...state,
+					origin: '#setErrors',
 					errors: inner.reduce(
 						(collection, error) => {
 							collection[convertPathToBracketNotation(error.path)] = error.message;
@@ -189,11 +192,12 @@ class Form<T> implements FormAttributes<T> {
 		try {
 			await this.schema.validate(state.data, { abortEarly: false });
 
-			this.store.update((state) => ({ ...state, errors: {} }));
+			this.store.update((state) => ({ ...state, origin: 'isValid|true', errors: {} }));
 
 			return true;
 		} catch (errors) {
-			if (!state.didAnyError) this.store.update((state) => ({ ...state, didAnyError: true }));
+			if (!state.didAnyError)
+				this.store.update((state) => ({ ...state, origin: 'isValid|false', didAnyError: true }));
 
 			this.#setErrors(errors, !this.scroll);
 			return false;
@@ -203,6 +207,7 @@ class Form<T> implements FormAttributes<T> {
 	#setLoading = (loading: boolean) => {
 		this.store.update((state) => ({
 			...state,
+			origin: '#setLoading',
 			loading
 		}));
 	};
@@ -226,6 +231,7 @@ class Form<T> implements FormAttributes<T> {
 			data: {
 				...this.defaultValues
 			},
+			origin: 'resetState',
 			errors: {},
 			didAnyError: false
 		}));
@@ -270,6 +276,7 @@ class Form<T> implements FormAttributes<T> {
 
 			return {
 				...state,
+				origin: 'setValue',
 				data: {
 					...state.data,
 					[name]: isArray
@@ -284,18 +291,28 @@ class Form<T> implements FormAttributes<T> {
 		const parts = field.replace(/\]/g, '').split('[');
 		const [name, ...structure] = parts;
 
-		this.setValue(name, (state: any) => {
-			return this.#modifyField(state, structure, value, 'add');
-		});
+		this.store.update((state: any) => ({
+			...state,
+			origin: 'add',
+			data: {
+				...state.data,
+				[name]: this.#modifyField(state.data[name], structure, value, 'add')
+			}
+		}));
 	};
 
 	remove = (field: string, i: number) => {
 		const parts = field.replace(/\]/g, '').split('[');
 		const [name, ...structure] = parts;
-
-		this.setValue(name, (state: any) => {
-			return this.#modifyField(state, structure, (_: any, j: number) => j !== i, 'remove');
-		});
+		
+		this.store.update((state: any) => ({
+			...state,
+			origin: 'remove',
+			data: {
+				...state.data,
+				[name]: this.#modifyField(state.data[name], structure, (_: any, j: number) => j !== i, 'remove')
+			}
+		}));
 	};
 
 	#getValueRecursively = (path: string[], state: any): any => {
