@@ -82,7 +82,7 @@ class Form<T> implements FormAttributes<T> {
 		this.store.subscribe((state) => {
 			this.currentState = state;
 			this.onUpdate(state);
-			
+
 			if (state.didAnyError && !isEqual(state.data, this.prevData)) {
 				this.isValid();
 				this.prevData = state.data;
@@ -140,36 +140,43 @@ class Form<T> implements FormAttributes<T> {
 		if (this.startData) node.dispatchEvent(new Event('change'));
 	};
 
+	convertPathToBracketNotation = (path: string) => {
+		const segments = path.split(/\.|\[(.*?)\]/).filter(Boolean);
+
+		if (segments.length === 1) return path;
+
+		return segments
+			.map((segment, i) => {
+				if (i === 0) return segment;
+
+				return segment.includes('[') ? segment : `[${segment}]`;
+			})
+			.join('');
+	};
+
+	getElementsFromErrorPaths(inner: Record<string, any>): HTMLElement[] {
+		return Object.values(inner)
+			.map((error) => {
+				const bracketName = this.convertPathToBracketNotation(error.path);
+				return document.querySelector<HTMLElement>(`[name="${bracketName}"]`);
+			})
+			.filter((element): element is HTMLElement => element !== null);
+	}
+
 	#setErrors = (errors: unknown, toScroll = true) => {
-		const convertPathToBracketNotation = (path: string) => {
-			const segments = path.split(/\.|\[(.*?)\]/).filter(Boolean);
-
-			if (segments.length === 1) return path;
-
-			return segments
-				.map((segment, i) => {
-					if (i === 0) return segment;
-
-					return segment.includes('[') ? segment : `[${segment}]`;
-				})
-				.join('');
-		};
-
 		if (typeof errors === 'object' && errors !== null && 'inner' in errors) {
 			const { inner } = errors as YupErrors;
 
 			this.store.update((state) => {
-				const firstError = Object.values(inner)[0];
-				const bracketName = convertPathToBracketNotation(firstError.path);
-				const element = document.querySelector<HTMLElement>(`[name="${bracketName}"]`);
+				const elements = this.getElementsFromErrorPaths(inner);
 
-				if (element && toScroll) scrollToElement(element);
+				if (elements.length === 0 && toScroll) scrollToElement(elements);
 
 				return {
 					...state,
 					errors: inner.reduce(
 						(collection, error) => {
-							collection[convertPathToBracketNotation(error.path)] = error.message;
+							collection[this.convertPathToBracketNotation(error.path)] = error.message;
 							return collection;
 						},
 						{} as { [key: string]: string }
@@ -193,8 +200,7 @@ class Form<T> implements FormAttributes<T> {
 
 			return true;
 		} catch (errors) {
-			if (!state.didAnyError)
-				this.store.update((state) => ({ ...state, didAnyError: true }));
+			if (!state.didAnyError) this.store.update((state) => ({ ...state, didAnyError: true }));
 
 			this.#setErrors(errors, this.scroll);
 			return false;
@@ -297,12 +303,17 @@ class Form<T> implements FormAttributes<T> {
 	remove = (field: string, i: number) => {
 		const parts = field.replace(/\]/g, '').split('[');
 		const [name, ...structure] = parts;
-		
+
 		this.store.update((state: any) => ({
 			...state,
 			data: {
 				...state.data,
-				[name]: this.#modifyField(state.data[name], structure, (_: any, j: number) => j !== i, 'remove')
+				[name]: this.#modifyField(
+					state.data[name],
+					structure,
+					(_: any, j: number) => j !== i,
+					'remove'
+				)
 			}
 		}));
 	};

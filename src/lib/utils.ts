@@ -8,7 +8,21 @@ const isInViewport = (element: HTMLElement) => {
 	);
 };
 
-export const scrollToElement = (element: HTMLElement, padding = 150) => {
+const getFirstElement = (elements: HTMLElement[]): HTMLElement | null => {
+	if (elements.length === 0) return null;
+
+	return elements.reduce((first, current) => {
+		return current.getBoundingClientRect().top < first.getBoundingClientRect().top
+			? current
+			: first;
+	});
+};
+
+export const scrollToElement = (elements: HTMLElement[], padding = 150) => {
+	const element = getFirstElement(elements);
+
+	if (!element) return;
+
 	if (!isInViewport(element))
 		window.scrollTo({
 			top: element.getBoundingClientRect().top + window.scrollY - padding,
