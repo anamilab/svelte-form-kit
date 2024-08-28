@@ -1,6 +1,6 @@
 {
 	"name": "@anamilab/svelte-form-kit",
-	"version": "0.2.4",
+	"version": "0.2.5",
 	"author": "Eduardo Torres <contato@eduardotorres.dev>",
 	"scripts": {
 		"dev": "vite dev",
