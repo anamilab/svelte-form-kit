@@ -170,7 +170,7 @@ class Form<T> implements FormAttributes<T> {
 			this.store.update((state) => {
 				const elements = this.getElementsFromErrorPaths(inner);
 
-				if (elements.length === 0 && toScroll) scrollToElement(elements);
+				if (elements.length > 0 && toScroll) scrollToElement(elements);
 
 				return {
 					...state,
