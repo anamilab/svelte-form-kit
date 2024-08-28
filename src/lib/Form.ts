@@ -196,7 +196,7 @@ class Form<T> implements FormAttributes<T> {
 			if (!state.didAnyError)
 				this.store.update((state) => ({ ...state, didAnyError: true }));
 
-			this.#setErrors(errors, !this.scroll);
+			this.#setErrors(errors, this.scroll);
 			return false;
 		}
 	};
