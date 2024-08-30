@@ -90,7 +90,10 @@ class Form<T> implements FormAttributes<T> {
 		});
 
 		this.onCreate(this);
-		this.createContext();
+
+		try {
+			this.createContext();
+		} catch { /* empty */ }
 	}
 
 	createContext() {
