@@ -82,7 +82,8 @@ class Form<T> implements FormAttributes<T> {
 
 		this.store.subscribe((state) => {
 			this.currentState = state;
-			this.onUpdate(state);
+
+			if (!isEqual(state.data, defaultValues)) this.onUpdate(state);
 
 			if (state.didAnyError && !isEqual(state.data, this.prevData)) {
 				this.isValid();
@@ -94,7 +95,9 @@ class Form<T> implements FormAttributes<T> {
 
 		try {
 			this.createContext();
-		} catch { /* empty */ }
+		} catch {
+			/* empty */
+		}
 	}
 
 	createContext() {
