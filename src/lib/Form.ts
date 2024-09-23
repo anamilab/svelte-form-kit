@@ -19,7 +19,7 @@ export interface FormAttributes<T> {
 	defaultValues: Partial<T>;
 	scroll: boolean;
 	schema: Schema | boolean;
-	reset: boolean;
+	canReset: boolean;
 	startData: boolean;
 	onCreate: (data?: Form<T>) => void;
 	onSubmit: ((data?: Partial<T>) => void) | ((data?: Partial<T>) => Promise<void>);
@@ -43,7 +43,7 @@ class Form<T> implements FormAttributes<T> {
 	defaultValues: Partial<T> = {};
 	scroll: boolean;
 	schema: Schema | boolean;
-	reset: boolean;
+	canReset: boolean;
 	startData: boolean;
 	onCreate: (form?: Form<T>) => void;
 	onSubmit: ((data?: Partial<T>) => void) | ((data?: Partial<T>) => Promise<void>);
@@ -56,16 +56,17 @@ class Form<T> implements FormAttributes<T> {
 		defaultValues = {},
 		scroll = false,
 		schema = false,
-		reset = false,
+		reset,
+		canReset = true,
 		startData = false,
 		onCreate = () => {},
 		onSubmit = () => {},
 		onUpdate = () => {}
-	}: Partial<FormAttributes<T>> | undefined = {}) {
+	}: (Partial<FormAttributes<T>> & { reset?: boolean }) | undefined = {}) {
 		this.defaultValues = defaultValues;
 		this.scroll = scroll;
 		this.schema = schema;
-		this.reset = reset;
+		this.canReset = typeof reset === 'boolean' ? reset : canReset;
 		this.startData = startData;
 		this.onCreate = onCreate;
 		this.onSubmit = onSubmit;
@@ -81,7 +82,8 @@ class Form<T> implements FormAttributes<T> {
 
 		this.store.subscribe((state) => {
 			this.currentState = state;
-			this.onUpdate(state);
+
+			if (!isEqual(state.data, defaultValues)) this.onUpdate(state);
 
 			if (state.didAnyError && !isEqual(state.data, this.prevData)) {
 				this.isValid();
@@ -229,15 +231,16 @@ class Form<T> implements FormAttributes<T> {
 		this.#setLoading(true);
 		await this.onSubmit(state.data);
 		this.#setLoading(false);
-		if (this.reset) this.resetState();
+		if (this.canReset) this.reset();
 	};
 
-	resetState = () => {
+	reset = (data = this.defaultValues) => {
+		this.defaultValues = data;
+
 		this.store.update((state) => ({
 			...state,
-			data: {
-				...this.defaultValues
-			},
+			data,
+			origin: 'resetState',
 			errors: {},
 			didAnyError: false
 		}));
