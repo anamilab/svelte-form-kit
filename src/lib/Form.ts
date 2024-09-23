@@ -3,7 +3,7 @@
  * @todo remover os tipos any da classe
  */
 import { setContext } from 'svelte';
-import { derived, writable, type Writable } from 'svelte/store';
+import { writable, type Writable } from 'svelte/store';
 import { scrollToElement, isEqual } from './utils.js';
 import type { Schema } from 'yup';
 import key from './key.js';
