@@ -93,7 +93,9 @@ class Form<T> implements FormAttributes<T> {
 
 		try {
 			this.createContext();
-		} catch { /* empty */ }
+		} catch {
+			/* empty */
+		}
 	}
 
 	createContext() {
@@ -243,14 +245,19 @@ class Form<T> implements FormAttributes<T> {
 
 	watch = (attributeName: string) => {
 		let currentValue = this.currentState.data[attributeName as keyof T];
+		const fieldStore = writable(currentValue);
 
-		return derived(this.store, ($form) => {
-			const data: unknown = $form.data[attributeName as keyof T];
+		this.store.subscribe(($form) => {
+			const data = $form.data[attributeName as keyof T];
+
 			if (data !== currentValue) {
 				currentValue = $form.data[attributeName as keyof T];
-				return currentValue;
+
+				fieldStore.set(currentValue);
 			}
 		});
+
+		return { subscribe: fieldStore.subscribe };
 	};
 
 	getValue = (name: string, state = this.currentState) => {
