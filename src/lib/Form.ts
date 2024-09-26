@@ -13,6 +13,7 @@ export type FormState<T> = {
 	loading: boolean;
 	errors: { [key: string]: string };
 	didAnyError: boolean;
+	didAnyChange: boolean;
 };
 
 export interface FormAttributes<T> {
@@ -76,14 +77,19 @@ class Form<T> implements FormAttributes<T> {
 			data: defaultValues || {},
 			loading: false,
 			errors: {},
-			didAnyError: false
+			didAnyError: false,
+			didAnyChange: false
 		};
 		this.store = writable(this.currentState);
 
 		this.store.subscribe((state) => {
 			this.currentState = state;
 
-			if (!isEqual(state.data, defaultValues)) this.onUpdate(state);
+			if (!isEqual(state.data, defaultValues)) {
+				if (!state.didAnyChange) this.store.set({ ...state, didAnyChange: true });
+			}
+
+			if (state.didAnyChange) this.onUpdate(state);
 
 			if (state.didAnyError && !isEqual(state.data, this.prevData)) {
 				this.isValid();
